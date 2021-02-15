@@ -2,7 +2,7 @@ import React from 'react';
 import { Grid } from '@material-ui/core';
 import ChipsInput from './ChipsInput';
 import { ReactComponent as FileIcon } from '../icons/fileIcon.svg';
-import { PdfPreview } from '.';
+import { PdfPreview } from '..';
 
 const AttachPDF = ({
   files,

@@ -32,7 +32,7 @@ import {
 
 import convertMStoTimeLeft from '../common/convertMSToTimeLeft';
 
-import EventDeleteModal from './EventDeleteModal';
+import EventDeleteModal from './components/EventDeleteModal';
 
 import useStyles from './styles/styles';
 import { EventDetailsProps, NotificationItem, PeriodType } from './types/types';
@@ -41,15 +41,15 @@ import { createLink, normaliseEventFormHelper } from '../common/helper';
 import { messageFragment } from '../graphql/generated';
 import { initialEventForm as initialEventFormWithProps } from '../common/helper';
 import { reducer as reducerWithProps } from '../common/reducers';
-import TextField from './TextField';
+import TextField from './components/TextField';
 import { ReactComponent as ErrorOutlineIcon } from '../icons/errorOutline.svg';
-import ChipsInput from './ChipsInput';
-import EventFormNotifications from './EventFormNotifications';
-import AttachPDF from './AttachPDF';
-import LinkElement from './Link';
-import DateRow from './DateRow';
-import ActionsButtons from './ActionsButtons';
-import SnackBarElement from './SnackBarElement';
+import ChipsInput from './components/ChipsInput';
+import EventFormNotifications from './components/EventFormNotifications';
+import AttachPDF from './components/AttachPDF';
+import LinkElement from './components/Link';
+import DateRow from './components/DateRow';
+import ActionsButtons from './components/ActionsButtons';
+import SnackBarElement from './components/SnackBarElement';
 
 const EventDetails = ({
   event,

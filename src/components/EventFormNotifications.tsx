@@ -1,5 +1,5 @@
 import React from 'react';
-import { User } from '../graphql/generated';
+import { User } from '../../graphql/generated';
 import {
   Grid,
   TextField as TextFieldMaterial,
@@ -9,9 +9,9 @@ import {
   IconButton,
 } from '@material-ui/core';
 import { CloseOutlined as CloseOutlinedIcon } from '@material-ui/icons';
-import { NotificationItem } from './types/types';
-import { periodTypes } from '../common/periodTypes';
-import useStyles from './styles/styles';
+import { NotificationItem } from '../types/types';
+import { periodTypes } from '../../common/periodTypes';
+import useStyles from '../styles/styles';
 
 interface EventFormNotificationsProps {
   sharingUsers: User[];

@@ -1,6 +1,6 @@
 import React from 'react';
 
-import useStyles from './styles/styles';
+import useStyles from '../styles/styles';
 import TextField from './TextField';
 import { Link } from 'react-router-dom';
 

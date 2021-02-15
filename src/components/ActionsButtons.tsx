@@ -1,6 +1,6 @@
 import React from 'react';
 import { Grid, Button, CircularProgress } from '@material-ui/core';
-import useStyles from './styles/styles';
+import useStyles from '../styles/styles';
 
 const ActionsButtons = ({
   setIsOpenModalConfirm,

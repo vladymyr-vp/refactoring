@@ -4,10 +4,10 @@ import { FormControlLabel, Switch } from '@material-ui/core';
 import DateFnsUtils from '@date-io/date-fns';
 import moment from 'moment';
 
-import useStyles from './styles/styles';
+import useStyles from '../styles/styles';
 import TextField from './TextField';
 import Datepicker from './Datepicker';
-import NumberFormatTime from '../common/NumberFormatTime';
+import NumberFormatTime from '../../common/NumberFormatTime';
 
 const DateRow = ({
   event,

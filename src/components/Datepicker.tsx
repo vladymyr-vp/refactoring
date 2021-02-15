@@ -1,7 +1,7 @@
 import React from 'react';
 import { InputAdornment } from '@material-ui/core';
 import { DatePicker } from '@material-ui/pickers';
-import useStyles from './styles/styles';
+import useStyles from '../styles/styles';
 import TextField from './TextField';
 import { ReactComponent as DropdownIcon } from '../icons/dropdownRegular.svg';
 
