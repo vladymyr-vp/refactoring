@@ -1,4 +1,4 @@
-import { Maybe, Message, User } from '../../graphql/generated';
+import { Maybe, Message, User, File } from '../../graphql/generated';
 
 export type EventDetailsProps = {
   event?: Event;
@@ -33,3 +33,7 @@ export type NotificationItem = {
 
 export type ActionType = 'userId' | 'periodType' | 'period'; 
 export type PeriodType = 'Minute' | 'Hour' | 'Day' | 'Week';
+
+export type normaliseEventFormHelperProps = {
+  eventForm: any, allDay: boolean, files: File[]
+}

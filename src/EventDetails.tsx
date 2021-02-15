@@ -7,10 +7,11 @@ import {
   DialogContent,
   Grid,
   IconButton,
-  CircularProgress,
-  Snackbar,
+  Box,
 } from '@material-ui/core';
-import MuiAlert from '@material-ui/lab/Alert';
+
+import { MuiPickersUtilsProvider } from '@material-ui/pickers';
+import DateFnsUtils from '@date-io/date-fns';
 
 import { CloseOutlined as CloseOutlinedIcon } from '@material-ui/icons';
 import 'date-fns';
@@ -18,7 +19,6 @@ import moment from 'moment';
 
 import {
   File,
-  UpdateEventInput,
   useUpdateEventMutation,
   useCreateEventMutation,
   useDeleteEventMutation,
@@ -27,7 +27,6 @@ import {
   Calendar,
   EventDocument,
   useGetNotificationSettingsByTagLazyQuery,
-  EventNotificationInput,
   GetSharedAccessQuery,
 } from '../graphql/generated';
 
@@ -37,12 +36,20 @@ import EventDeleteModal from './EventDeleteModal';
 
 import useStyles from './styles/styles';
 import { EventDetailsProps, NotificationItem, PeriodType } from './types/types';
-import { periodRate } from '../common/periodTypes';
-import { createLink } from '../common/helper';
+
+import { createLink, normaliseEventFormHelper } from '../common/helper';
 import { messageFragment } from '../graphql/generated';
 import { initialEventForm as initialEventFormWithProps } from '../common/helper';
 import { reducer as reducerWithProps } from '../common/reducers';
-import PickersProvider from './PickersProvider';
+import TextField from './TextField';
+import { ReactComponent as ErrorOutlineIcon } from '../icons/errorOutline.svg';
+import ChipsInput from './ChipsInput';
+import EventFormNotifications from './EventFormNotifications';
+import AttachPDF from './AttachPDF';
+import LinkElement from './Link';
+import DateRow from './DateRow';
+import ActionsButtons from './ActionsButtons';
+import SnackBarElement from './SnackBarElement';
 
 const EventDetails = ({
   event,
@@ -206,47 +213,12 @@ const EventDetails = ({
     return false;
   };
 
-  const normaliseEventForm = (): UpdateEventInput => {
-    const startTime = moment(
-      `${eventForm.startDate} ${eventForm.startTime}`,
-      'l HH:mm',
-    ).format();
+  const normaliseEventForm = normaliseEventFormHelper({
+    eventForm,
+    allDay,
+    files,
+  });
 
-    const endTime = moment(
-      `${eventForm.endDate} ${eventForm.endTime}`,
-      'l HH:mm',
-    ).format();
-
-    let startTimeUTC = startTime;
-    let endTimeUTC = endTime;
-    // Converting dates to UTC for all day,
-    // because nylas shows wrong date range with local time
-    if (allDay) {
-      startTimeUTC = moment(startTime).utcOffset(0, true).format();
-      endTimeUTC = moment(endTime).utcOffset(0, true).format();
-    }
-
-    const normalizedNotifications: EventNotificationInput[] = [];
-
-    eventForm.notifications.forEach((item: NotificationItem) => {
-      if (item?.period && Number(item?.period) > 0 && item.userId !== 'none') {
-        normalizedNotifications.push({
-          userId: item.userId,
-          notifyBefore: Number(item.period) * periodRate[item.periodType],
-        });
-      }
-    });
-
-    return {
-      title: eventForm.title,
-      startTime: startTimeUTC,
-      endTime: endTimeUTC,
-      location: eventForm.location,
-      description: eventForm.description,
-      notifications: normalizedNotifications,
-      attachmentIds: files.map(attach => attach.id),
-    };
-  };
   const handleFormSave = async (eventDom: React.FormEvent<HTMLFormElement>) => {
     eventDom.preventDefault();
 
@@ -529,17 +501,10 @@ const EventDetails = ({
 
   return (
     <>
-      <Snackbar
-        anchorOrigin={{
-          vertical: 'bottom',
-          horizontal: 'left',
-        }}
-        open={successMessageOpen}
-        autoHideDuration={3000}
-        onClose={() => setSuccessMessageOpen(false)}
-      >
-        <MuiAlert severity="success">Event has been saved</MuiAlert>
-      </Snackbar>
+      <SnackBarElement
+        successMessageOpen={successMessageOpen}
+        setSuccessMessageOpen={setSuccessMessageOpen}
+      />
       <Dialog
         classes={{
           paper: classes.modal,
@@ -564,56 +529,158 @@ const EventDetails = ({
         </DialogTitle>
         <DialogContent>
           <form onSubmit={handleFormSave}>
-            <PickersProvider
-              eventForm={eventForm}
-              dispatch={dispatch}
-              event={event}
-              handleStartDateChange={handleStartDateChange}
-              allDay={allDay}
-              handleAllDay={handleAllDay}
-              calendarChips={calendarChips}
-              hasGraphQlConflictError={hasGraphQlConflictError}
-              link={link}
-              setOpen={setOpen}
-              message={message}
-              messageTitle={messageTitle}
-              sharingUsers={sharingUsers}
-              files={files}
-              handleChipClick={handleChipClick}
-              setFiles={setFiles}
-              previewOpen={previewOpen}
-              setPreviewOpen={setPreviewOpen}
-              currentAttachmentIndex={currentAttachmentIndex}
-              setCurrentAttachmentIndex={setCurrentAttachmentIndex}
-            />
+            <MuiPickersUtilsProvider utils={DateFnsUtils}>
+              <Grid
+                className={classes.headerPart}
+                container
+                spacing={2}
+                alignItems="center"
+              >
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    variant="outlined"
+                    label="Title"
+                    value={eventForm.title}
+                    onChange={(e: React.FormEvent<HTMLFormElement>) =>
+                      dispatch({
+                        field: 'title',
+                        value: e.currentTarget.value,
+                      })
+                    }
+                  />
+                </Grid>
+                <DateRow
+                  event={event}
+                  eventForm={eventForm}
+                  handleStartDateChange={handleStartDateChange}
+                  dispatch={dispatch}
+                  handleAllDay={handleAllDay}
+                />
+              </Grid>
+              <Grid container spacing={2} alignItems="center">
+                <Grid item xs={9}>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    variant="outlined"
+                    label="Calendar"
+                    value={calendarChips}
+                  />
+                </Grid>
+                <Grid
+                  item
+                  container
+                  xs={3}
+                  alignItems="center"
+                  className={
+                    hasGraphQlConflictError() ? classes.conflictError : ''
+                  }
+                >
+                  <Box display="flex" mt={4}>
+                    <ErrorOutlineIcon className={classes.icon} />
+                    &nbsp;
+                    {event?.conflict || hasGraphQlConflictError() ? (
+                      <>Has conflict.</>
+                    ) : (
+                      <>No Conflict</>
+                    )}
+                  </Box>
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    variant="outlined"
+                    label="Address"
+                    value={eventForm.location}
+                    onChange={(e: React.FormEvent<HTMLFormElement>) =>
+                      dispatch({
+                        field: 'location',
+                        value: e.currentTarget.value,
+                      })
+                    }
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <Grid container spacing={2} alignItems="flex-end">
+                    <Grid item xs={6}>
+                      <LinkElement
+                        link={link}
+                        setOpen={setOpen}
+                        messageTitle={messageTitle}
+                        message={message}
+                        event={event}
+                      />
+                    </Grid>
+                    <Grid item xs={6}>
+                      <ChipsInput
+                        value={
+                          event?.message?.tags?.map(tag => tag.name) ||
+                          message?.tags.map(tag => tag.name) ||
+                          []
+                        }
+                        label="Category:"
+                        isLineType
+                        borderType="square"
+                        withBorder
+                      />
+                    </Grid>
+                  </Grid>
+                </Grid>
+                <EventFormNotifications
+                  eventForm={eventForm}
+                  sharingUsers={sharingUsers}
+                  dispatch={dispatch}
+                />
+                <Grid item xs={12}>
+                  <Button
+                    className={classes.addReminder}
+                    onClick={() => {
+                      dispatch({
+                        field: `notification:0:add`,
+                      });
+                    }}
+                    disableRipple
+                  >
+                    Add Reminder
+                  </Button>
+                </Grid>
+                <AttachPDF
+                  files={files}
+                  handleChipClick={handleChipClick}
+                  previewOpen={previewOpen}
+                  setFiles={setFiles}
+                  setPreviewOpen={setPreviewOpen}
+                  currentAttachmentIndex={currentAttachmentIndex}
+                  setCurrentAttachmentIndex={setCurrentAttachmentIndex}
+                />
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    size="small"
+                    variant="outlined"
+                    label="Note"
+                    multiline
+                    rows={5}
+                    value={eventForm.description}
+                    onChange={(e: React.FormEvent<HTMLFormElement>) =>
+                      dispatch({
+                        field: 'description',
+                        value: e.currentTarget.value,
+                      })
+                    }
+                  />
+                </Grid>
+              </Grid>
+            </MuiPickersUtilsProvider>
 
-            <Grid
-              className={classes.actions}
-              container
-              alignItems="center"
-              justify="space-between"
-            >
-              <Grid item className={classes.lastUpdated}>
-                {'Event update time goes here'}
-              </Grid>
-              <Grid item>
-                <Button
-                  className={classes.deleteButton}
-                  onClick={() => setIsOpenModalConfirm(true)}
-                >
-                  Delete
-                </Button>
-                <Button
-                  variant="contained"
-                  color="primary"
-                  disableElevation
-                  type="submit"
-                  disabled={updateLoading || createLoading}
-                >
-                  {updateLoading ? <CircularProgress size={25} /> : 'Save'}
-                </Button>
-              </Grid>
-            </Grid>
+            <ActionsButtons
+              setIsOpenModalConfirm={setIsOpenModalConfirm}
+              updateLoading={updateLoading}
+              createLoading={}
+            />
           </form>
         </DialogContent>
       </Dialog>
