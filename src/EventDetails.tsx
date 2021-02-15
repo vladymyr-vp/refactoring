@@ -9,14 +9,10 @@ import {
   Grid,
   Switch,
   TextField as TextFieldMaterial,
-  FormControl,
-  Select,
-  MenuItem,
   IconButton,
   CircularProgress,
   Snackbar,
   Box,
-  InputAdornment,
 } from '@material-ui/core';
 import MuiAlert from '@material-ui/lab/Alert';
 
@@ -24,18 +20,11 @@ import { CloseOutlined as CloseOutlinedIcon } from '@material-ui/icons';
 
 import { PdfPreview } from '.';
 
-import { MuiPickersUtilsProvider, DatePicker } from '@material-ui/pickers';
+import { MuiPickersUtilsProvider } from '@material-ui/pickers';
 
 import 'date-fns';
 import DateFnsUtils from '@date-io/date-fns';
 import moment from 'moment';
-import format from 'date-fns/format';
-import isValid from 'date-fns/isValid';
-import differenceInMinutes from 'date-fns/differenceInMinutes';
-import addMinutes from 'date-fns/addMinutes';
-import differenceInDays from 'date-fns/differenceInDays';
-import addDays from 'date-fns/addDays';
-import parse from 'date-fns/parse';
 import { ReactComponent as ErrorOutlineIcon } from '../icons/errorOutline.svg';
 import { ReactComponent as FileIcon } from '../icons/fileIcon.svg';
 
@@ -58,7 +47,7 @@ import convertMStoTimeLeft from '../common/convertMSToTimeLeft';
 
 import TextField from './TextField';
 import ChipsInput from './ChipsInput';
-import { ReactComponent as DropdownIcon } from '../icons/dropdownRegular.svg';
+
 import NumberFormatTime from '../common/NumberFormatTime';
 import { Link } from 'react-router-dom';
 import EventDeleteModal from './EventDeleteModal';
@@ -71,9 +60,14 @@ import {
   ActionType,
   PeriodType,
 } from './types/types';
-import { periodRate, periodTypes } from '../common/periodTypes';
+import { periodRate } from '../common/periodTypes';
 import { createLink } from '../common/helper';
 import { messageFragment } from '../graphql/generated';
+import { initialEventForm as initialEventFormWithProps } from '../common/helper';
+import { reducer as reducerWithProps } from '../common/reducers';
+import Datepicker from './Datepicker';
+import EventFormNotifications from './EventFormNotifications';
+import PickersProvider from './PickersProvider';
 
 const EventDetails = ({
   event,
@@ -153,121 +147,29 @@ const EventDetails = ({
   const [sharedDataAccess, setSharedDataAccess] = useState<
     GetSharedAccessQuery | undefined | null
   >(null);
-  const initialEventForm: any = {
-    ...message?.eventPreview,
-    ...message?.eventInfo,
-    ...event,
-    startDate: moment(
-      event?.startTime || message?.eventInfo?.startTime || now,
-    ).format('l'),
-    startTime: moment(
-      event?.startTime || message?.eventInfo?.startTime || now,
-    ).format('HH:mm'),
-    endTime: moment(
-      event?.endTime || message?.eventInfo?.endTime || oneHourFuture,
-    ).format('HH:mm'),
-    endDate: moment(
-      event?.endTime || message?.eventInfo?.startTime || nowDateEndDate,
-    ).format('l'),
-    notifications: notifications,
-  };
+
+  const initialEventForm = initialEventFormWithProps(
+    message,
+    now,
+    oneHourFuture,
+    nowDateEndDate,
+    notifications,
+    event,
+  );
 
   const reducer = (
-    // TODO: Fix the types. In rush atm to demo this.
     state: any,
     { field, value }: { field: string; value?: string },
-  ) => {
-    if (field === 'reset') {
-      return initialEventForm;
-    }
-    if (field.match(/notification*/)) {
-      const [, index, action] = field.split(':');
-      if (action === 'add') {
-        return {
-          ...state,
-          notifications: [
-            ...state.notifications,
-            { userId: 'none', period: '1', periodType: 'Hour' },
-          ],
-        };
-      } else if (action === 'remove') {
-        return {
-          ...state,
-          notifications: state.notifications.filter(
-            (el: NotificationItem, i: number) => i !== Number(index),
-          ),
-        };
-      } else if (action === 'periodType') {
-        const updatedArray: NotificationItem[] = [...state.notifications];
-        updatedArray[Number(index)].periodType = value as PeriodType;
+  ) =>
+    reducerWithProps(
+      state,
+      { field, value },
+      initialEventForm,
+      oneHourFuture,
+      now,
+      event,
+    );
 
-        return {
-          ...state,
-          notifications: updatedArray,
-        };
-      } else if (action === 'period') {
-        const updatedArray: NotificationItem[] = [...state.notifications];
-        if (typeof value === 'string') {
-          updatedArray[Number(index)].period = value;
-        }
-
-        return {
-          ...state,
-          notifications: updatedArray,
-        };
-      } else if (action === 'userId') {
-        const updatedArray: NotificationItem[] = [...state.notifications];
-        if (typeof value === 'string') {
-          updatedArray[Number(index)].userId = value;
-        }
-
-        return {
-          ...state,
-          notifications: updatedArray,
-        };
-      }
-    }
-    if (field === 'startTime') {
-      if (value) {
-        const timeDif = differenceInMinutes(
-          new Date(event?.endTime || oneHourFuture),
-          new Date(event?.startTime || now),
-        );
-
-        const parsedDate = parse(value, 'HH:mm', new Date());
-        const endTime = addMinutes(parsedDate, timeDif);
-        return {
-          ...state,
-          startTime: isValid(parsedDate)
-            ? format(parsedDate, 'HH:mm')
-            : state.startTime,
-          endTime: isValid(parsedDate)
-            ? format(endTime, 'HH:mm')
-            : state.endTime,
-        };
-      }
-      return { ...state, [field]: value };
-    }
-    if (field === 'startDate') {
-      if (value) {
-        const timeDif = differenceInDays(
-          new Date(event?.endTime || oneHourFuture),
-          new Date(event?.startTime || now),
-        );
-
-        const addDaysDate = addDays(new Date(value), timeDif);
-        const endDate = format(addDaysDate, 'M/d/Y');
-        return {
-          ...state,
-          startDate: value,
-          endDate,
-        };
-      }
-      return { ...state, [field]: value };
-    }
-
-    return { ...state, [field]: value };
-  };
   const [eventForm, dispatch] = useReducer(reducer, initialEventForm);
 
   useEffect(() => {
@@ -691,381 +593,29 @@ const EventDetails = ({
         </DialogTitle>
         <DialogContent>
           <form onSubmit={handleFormSave}>
-            <MuiPickersUtilsProvider utils={DateFnsUtils}>
-              <Grid
-                className={classes.headerPart}
-                container
-                spacing={2}
-                alignItems="center"
-              >
-                <Grid item xs={12}>
-                  <TextField
-                    fullWidth
-                    size="small"
-                    variant="outlined"
-                    label="Title"
-                    value={eventForm.title}
-                    onChange={(e: React.FormEvent<HTMLFormElement>) =>
-                      dispatch({
-                        field: 'title',
-                        value: e.currentTarget.value,
-                      })
-                    }
-                  />
-                </Grid>
-                <div className={classes.dateRow}>
-                  <div className={classes.dateCol}>
-                    <MuiPickersUtilsProvider utils={DateFnsUtils}>
-                      <DatePicker
-                        autoOk
-                        className={classes.dateInput}
-                        disableToolbar
-                        disablePast={event ? false : true}
-                        variant="inline"
-                        format="M/d/yyyy"
-                        value={eventForm.startDate}
-                        inputVariant="outlined"
-                        onChange={handleStartDateChange}
-                        TextFieldComponent={props => (
-                          <TextField
-                            {...props}
-                            size="small"
-                            variant="outlined"
-                            label="Start Date"
-                            InputProps={{
-                              endAdornment: (
-                                <InputAdornment position="end">
-                                  <DropdownIcon />
-                                </InputAdornment>
-                              ),
-                            }}
-                          />
-                        )}
-                      />
-                    </MuiPickersUtilsProvider>
-                  </div>
-                  <div className={classes.dateCol}>
-                    <TextField
-                      className={classes.timeInput}
-                      required
-                      size="small"
-                      label="Start Time"
-                      variant="outlined"
-                      value={convertTimeStringToNumber(eventForm.startTime)}
-                      InputProps={{
-                        inputComponent: NumberFormatTime as any,
-                      }}
-                      onChange={(e: any) =>
-                        dispatch({
-                          field: 'startTime',
-                          value: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
-                  <div
-                    className={`${classes.dateCol} ${classes.paddingBottom}`}
-                  >
-                    To
-                  </div>
-                  <div className={classes.dateCol}>
-                    <MuiPickersUtilsProvider utils={DateFnsUtils}>
-                      <DatePicker
-                        autoOk
-                        className={classes.dateInput}
-                        disablePast={event ? false : true}
-                        disableToolbar
-                        variant="inline"
-                        format="M/d/yyyy"
-                        value={eventForm.endDate}
-                        inputVariant="outlined"
-                        onChange={date => {
-                          if (!date) return;
-                          dispatch({
-                            field: 'endDate',
-                            value: moment(date).format('l'),
-                          });
-                        }}
-                        TextFieldComponent={props => (
-                          <TextField
-                            {...props}
-                            size="small"
-                            variant="outlined"
-                            label="End Date"
-                            InputProps={{
-                              endAdornment: (
-                                <InputAdornment position="end">
-                                  <DropdownIcon />
-                                </InputAdornment>
-                              ),
-                            }}
-                          />
-                        )}
-                      />
-                    </MuiPickersUtilsProvider>
-                  </div>
-                  <div className={classes.dateCol}>
-                    <TextField
-                      className={classes.timeInput}
-                      required
-                      size="small"
-                      label="End Time"
-                      variant="outlined"
-                      value={convertTimeStringToNumber(eventForm.endTime)}
-                      InputProps={{
-                        inputComponent: NumberFormatTime as any,
-                      }}
-                      onChange={(e: any) =>
-                        dispatch({
-                          field: 'endTime',
-                          value: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
-                  <div
-                    className={`${classes.dateCol} ${classes.paddingBottom}`}
-                  >
-                    <FormControlLabel
-                      control={
-                        <Switch
-                          classes={{
-                            root: classes.switchRoot,
-                            switchBase: classes.switchBase,
-                            thumb: classes.switchThumb,
-                            track: classes.switchTrack,
-                          }}
-                          checked={allDay}
-                          color="primary"
-                          onClick={handleAllDay}
-                        />
-                      }
-                      label="All Day"
-                    />
-                  </div>
-                </div>
-              </Grid>
-              <Grid container spacing={2} alignItems="center">
-                <Grid item xs={9}>
-                  <TextField
-                    fullWidth
-                    size="small"
-                    variant="outlined"
-                    label="Calendar"
-                    value={calendarChips}
-                  />
-                </Grid>
-                <Grid
-                  item
-                  container
-                  xs={3}
-                  alignItems="center"
-                  className={
-                    hasGraphQlConflictError() ? classes.conflictError : ''
-                  }
-                >
-                  <Box display="flex" mt={4}>
-                    <ErrorOutlineIcon className={classes.icon} />
-                    &nbsp;
-                    {event?.conflict || hasGraphQlConflictError() ? (
-                      <>Has conflict.</>
-                    ) : (
-                      <>No Conflict</>
-                    )}
-                  </Box>
-                </Grid>
-                <Grid item xs={12}>
-                  <TextField
-                    fullWidth
-                    size="small"
-                    variant="outlined"
-                    label="Address"
-                    value={eventForm.location}
-                    onChange={(e: React.FormEvent<HTMLFormElement>) =>
-                      dispatch({
-                        field: 'location',
-                        value: e.currentTarget.value,
-                      })
-                    }
-                  />
-                </Grid>
-                <Grid item xs={12}>
-                  <Grid container spacing={2} alignItems="flex-end">
-                    <Grid item xs={6}>
-                      <Link className={classes.linkStyles} to={link}>
-                        <TextField
-                          onClick={() => setOpen(false)}
-                          fullWidth
-                          size="small"
-                          variant="outlined"
-                          label="Mail"
-                          InputProps={{
-                            className: classes.multilineColor,
-                          }}
-                          value={
-                            messageTitle ||
-                            message?.caseStyle ||
-                            message?.subject ||
-                            event?.message?.caseStyle ||
-                            ''
-                          }
-                        />
-                      </Link>
-                    </Grid>
-                    <Grid item xs={6}>
-                      <ChipsInput
-                        value={
-                          event?.message?.tags?.map(tag => tag.name) ||
-                          message?.tags.map(tag => tag.name) ||
-                          []
-                        }
-                        label="Category:"
-                        isLineType
-                        borderType="square"
-                        withBorder
-                      />
-                    </Grid>
-                  </Grid>
-                </Grid>
-                {eventForm.notifications.map(
-                  (notify: NotificationItem, index: number) => (
-                    <>
-                      <Grid item xs={4}>
-                        <FormControl variant="outlined" size="small" fullWidth>
-                          <Select
-                            value={notify.userId}
-                            onChange={e =>
-                              dispatch({
-                                field: `notification:${index}:userId`,
-                                value: e.target.value as string,
-                              })
-                            }
-                          >
-                            <MenuItem value="none">
-                              <em>None</em>
-                            </MenuItem>
-                            {sharingUsers.map(item => (
-                              <MenuItem value={item.id} key={item.id}>
-                                <em>{`${item.name} (Notification)`}</em>
-                              </MenuItem>
-                            ))}
-                          </Select>
-                        </FormControl>
-                      </Grid>
-                      <Grid item xs={2}>
-                        <TextFieldMaterial
-                          fullWidth
-                          value={notify.period}
-                          type="number"
-                          size="small"
-                          variant="outlined"
-                          onChange={e =>
-                            dispatch({
-                              field: `notification:${index}:period`,
-                              value: e.target.value as string,
-                            })
-                          }
-                        />
-                      </Grid>
-                      <Grid item xs={3}>
-                        <FormControl variant="outlined" size="small" fullWidth>
-                          <Select
-                            value={notify.periodType}
-                            onChange={e =>
-                              dispatch({
-                                field: `notification:${index}:periodType`,
-                                value: e.target.value as string,
-                              })
-                            }
-                          >
-                            {periodTypes.map(periodType => (
-                              <MenuItem key={periodType} value={periodType}>
-                                {`${periodType}${
-                                  notify.period === '1' ? '' : 's'
-                                } Before`}
-                              </MenuItem>
-                            ))}
-                          </Select>
-                        </FormControl>
-                      </Grid>
-                      <Grid item xs={2}>
-                        <IconButton
-                          onClick={() => {
-                            dispatch({
-                              field: `notification:${index}:remove`,
-                            });
-                          }}
-                        >
-                          <CloseOutlinedIcon className={classes.closeIcon} />
-                        </IconButton>
-                      </Grid>
-                    </>
-                  ),
-                )}
-                <Grid item xs={12}>
-                  <Button
-                    className={classes.addReminder}
-                    onClick={() => {
-                      dispatch({
-                        field: `notification:0:add`,
-                      });
-                    }}
-                    disableRipple
-                  >
-                    Add Reminder
-                  </Button>
-                </Grid>
-                {files ? (
-                  <>
-                    <Grid item xs={12}>
-                      <ChipsInput
-                        isLineType
-                        type="files"
-                        label="Attached File:"
-                        borderType="square"
-                        onClick={handleChipClick}
-                        value={
-                          files.map(attachment => attachment?.name || '') || []
-                        }
-                        icon={<FileIcon width={13} height={13} />}
-                        onDeleteChip={index =>
-                          setFiles([
-                            ...files.slice(0, index),
-                            ...files.slice(index + 1),
-                          ])
-                        }
-                      />
-                      {files ? (
-                        <PdfPreview
-                          open={previewOpen}
-                          setOpen={setPreviewOpen}
-                          files={files as File[]}
-                          selectedFileIndex={currentAttachmentIndex}
-                          setFileIndex={setCurrentAttachmentIndex}
-                        />
-                      ) : null}
-                    </Grid>
-                  </>
-                ) : null}
-                <Grid item xs={12}>
-                  <TextField
-                    fullWidth
-                    size="small"
-                    variant="outlined"
-                    label="Note"
-                    multiline
-                    rows={5}
-                    value={eventForm.description}
-                    onChange={(e: React.FormEvent<HTMLFormElement>) =>
-                      dispatch({
-                        field: 'description',
-                        value: e.currentTarget.value,
-                      })
-                    }
-                  />
-                </Grid>
-              </Grid>
-            </MuiPickersUtilsProvider>
+            <PickersProvider
+              eventForm={eventForm}
+              dispatch={dispatch}
+              event={event}
+              handleStartDateChange={handleStartDateChange}
+              allDay={allDay}
+              handleAllDay={handleAllDay}
+              calendarChips={calendarChips}
+              hasGraphQlConflictError={hasGraphQlConflictError}
+              link={link}
+              setOpen={setOpen}
+              message={message}
+              messageTitle={messageTitle}
+              sharingUsers={sharingUsers}
+              files={files}
+              handleChipClick={handleChipClick}
+              setFiles={setFiles}
+              previewOpen={previewOpen}
+              setPreviewOpen={setPreviewOpen}
+              currentAttachmentIndex={currentAttachmentIndex}
+              setCurrentAttachmentIndex={setCurrentAttachmentIndex}
+            />
+
             <Grid
               className={classes.actions}
               container

@@ -10,5 +10,5 @@ ReactDOM.render(
 );
 
 export const PdfPreview = () => {
-  console.log('Hello');
+  return <div></div>;
 };
