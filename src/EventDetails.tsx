@@ -5,28 +5,16 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-  FormControlLabel,
   Grid,
-  Switch,
-  TextField as TextFieldMaterial,
   IconButton,
   CircularProgress,
   Snackbar,
-  Box,
 } from '@material-ui/core';
 import MuiAlert from '@material-ui/lab/Alert';
 
 import { CloseOutlined as CloseOutlinedIcon } from '@material-ui/icons';
-
-import { PdfPreview } from '.';
-
-import { MuiPickersUtilsProvider } from '@material-ui/pickers';
-
 import 'date-fns';
-import DateFnsUtils from '@date-io/date-fns';
 import moment from 'moment';
-import { ReactComponent as ErrorOutlineIcon } from '../icons/errorOutline.svg';
-import { ReactComponent as FileIcon } from '../icons/fileIcon.svg';
 
 import {
   File,
@@ -45,28 +33,15 @@ import {
 
 import convertMStoTimeLeft from '../common/convertMSToTimeLeft';
 
-import TextField from './TextField';
-import ChipsInput from './ChipsInput';
-
-import NumberFormatTime from '../common/NumberFormatTime';
-import { Link } from 'react-router-dom';
 import EventDeleteModal from './EventDeleteModal';
 
 import useStyles from './styles/styles';
-import {
-  EventDetailsProps,
-  EventForm,
-  NotificationItem,
-  ActionType,
-  PeriodType,
-} from './types/types';
+import { EventDetailsProps, NotificationItem, PeriodType } from './types/types';
 import { periodRate } from '../common/periodTypes';
 import { createLink } from '../common/helper';
 import { messageFragment } from '../graphql/generated';
 import { initialEventForm as initialEventFormWithProps } from '../common/helper';
 import { reducer as reducerWithProps } from '../common/reducers';
-import Datepicker from './Datepicker';
-import EventFormNotifications from './EventFormNotifications';
 import PickersProvider from './PickersProvider';
 
 const EventDetails = ({
@@ -542,10 +517,6 @@ const EventDetails = ({
       value: moment(date).format('l'),
     });
   };
-
-  // 16:00 => 1600 for number mask
-  const convertTimeStringToNumber = (timeString: string) =>
-    timeString.split(':').join('');
 
   const link = createLink(
     currentUser.email,

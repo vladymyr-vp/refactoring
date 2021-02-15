@@ -19,7 +19,6 @@ const PickersProvider = ({
   eventForm,
   dispatch,
   event,
-  handleStartDateChange,
   allDay,
   handleAllDay,
   calendarChips,
@@ -30,12 +29,13 @@ const PickersProvider = ({
   messageTitle,
   sharingUsers,
   files,
-  handleChipClick,
   setFiles,
   previewOpen,
   setPreviewOpen,
   currentAttachmentIndex,
   setCurrentAttachmentIndex,
+  handleStartDateChange,
+  handleChipClick,
 }) => {
   const classes = useStyles();
   const convertTimeStringToNumber = (timeString: string) =>
