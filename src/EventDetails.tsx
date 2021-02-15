@@ -37,7 +37,12 @@ import EventDeleteModal from './components/EventDeleteModal';
 import useStyles from './styles/styles';
 import { EventDetailsProps, NotificationItem, PeriodType } from './types/types';
 
-import { createLink, normaliseEventFormHelper } from '../common/helper';
+import {
+  createLink,
+  normaliseEventFormHelper,
+  handleAllDayHelper,
+  eventDetailsUseEffectHelper,
+} from '../common/helper';
 import { messageFragment } from '../graphql/generated';
 import { initialEventForm as initialEventFormWithProps } from '../common/helper';
 import { reducer as reducerWithProps } from '../common/reducers';
@@ -354,67 +359,14 @@ const EventDetails = ({
 
   useEffect(() => {
     if (!sharedDataLoading && sharedData?.sharedAccess?.targetUsers) {
-      let sharedUsers: User[] = [];
-
-      if (sharedData?.sharedAccess?.targetUsers) {
-        sharedUsers = [...sharedData?.sharedAccess?.targetUsers];
-        const isInclude = sharedUsers.find(({ id }) => id === currentUser.id);
-        if (!isInclude) {
-          sharedUsers.unshift(currentUser);
-        }
-      }
-
-      const initialNotificationPeriod: NotificationItem[] = [];
-
-      const periodTypeMap = {
-        weeks: 'Week',
-        days: 'Day',
-        hours: 'Hour',
-        minutes: 'Minute',
-      };
-
-      if (!event) {
-        if (
-          notificationSettingsData?.notificationSettingsByTag?.items &&
-          notificationSettingsData?.notificationSettingsByTag?.items?.length > 0
-        ) {
-          notificationSettingsData.notificationSettingsByTag.items.forEach(
-            item => {
-              const { type, value } = convertMStoTimeLeft(item.notifyBefore);
-              const tsType = type as keyof typeof periodTypeMap;
-              sharedUsers.forEach(sharedUser => {
-                initialNotificationPeriod.push({
-                  userId: sharedUser.id,
-                  periodType: periodTypeMap[tsType] as PeriodType,
-                  period: value.toString(),
-                });
-              });
-            },
-          );
-        } else {
-          sharedUsers.forEach(sharedUser => {
-            initialNotificationPeriod.push({
-              userId: sharedUser.id,
-              periodType: periodTypeMap.minutes as PeriodType,
-              period: '10',
-            });
-          });
-        }
-      } else if (event?.notifications && event?.notifications?.length > 0) {
-        event.notifications.forEach(notififcation => {
-          const { type, value } = convertMStoTimeLeft(
-            notififcation.notifyBefore,
-          );
-          const tsType = type as keyof typeof periodTypeMap;
-          initialNotificationPeriod.push({
-            userId: notififcation.userId,
-            periodType: periodTypeMap[tsType] as PeriodType,
-            period: value.toString(),
-          });
-        });
-      }
-      setNotifications(initialNotificationPeriod);
-      setSharingUsers(sharedUsers);
+      eventDetailsUseEffectHelper(
+        sharedData,
+        currentUser,
+        event,
+        notificationSettingsData,
+        setNotifications,
+        setSharingUsers,
+      );
     }
   }, [
     event,
@@ -436,43 +388,16 @@ const EventDetails = ({
     setPreviewOpen(true);
   };
 
-  const handleAllDay = () => {
-    if (allDay) {
-      setAllDay(false);
-      dispatch({
-        field: 'startTime',
-        value: allDayBufferStartTime,
-      });
-      dispatch({
-        field: 'endTime',
-        value: allDayBufferEndTime,
-      });
-    } else {
-      const isAfter = moment(moment(eventForm.startDate).format('l')).isAfter(
-        eventForm.endDate,
-      );
-
-      if (isAfter) {
-        dispatch({
-          field: 'endDate',
-          value: eventForm.startDate,
-        });
-      }
-
-      setAllDay(true);
-      setAllDayBufferStartTime(eventForm.startTime);
-      setAllDayBufferEndTime(eventForm.endTime);
-
-      dispatch({
-        field: 'startTime',
-        value: '00:00',
-      });
-      dispatch({
-        field: 'endTime',
-        value: '23:59',
-      });
-    }
-  };
+  const handleAllDay = handleAllDayHelper(
+    allDay,
+    setAllDay,
+    dispatch,
+    allDayBufferStartTime,
+    allDayBufferEndTime,
+    eventForm,
+    setAllDayBufferStartTime,
+    setAllDayBufferEndTime,
+  );
 
   const handleStartDateChange = (date: any) => {
     if (!date) return;
