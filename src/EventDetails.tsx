@@ -22,10 +22,9 @@ import MuiAlert from '@material-ui/lab/Alert';
 
 import { CloseOutlined as CloseOutlinedIcon } from '@material-ui/icons';
 
-import { PdfPreview } from './';
-import { makeStyles } from '@material-ui/core/styles';
+import { PdfPreview } from '.';
+
 import { MuiPickersUtilsProvider, DatePicker } from '@material-ui/pickers';
-import { red, blue } from '@material-ui/core/colors';
 
 import 'date-fns';
 import DateFnsUtils from '@date-io/date-fns';
@@ -42,13 +41,10 @@ import { ReactComponent as FileIcon } from '../icons/fileIcon.svg';
 
 import {
   File,
-  Event,
   UpdateEventInput,
   useUpdateEventMutation,
   useCreateEventMutation,
   useDeleteEventMutation,
-  Maybe,
-  Message,
   useGetSharedAccessQuery,
   User,
   Calendar,
@@ -59,7 +55,6 @@ import {
 } from '../graphql/generated';
 
 import convertMStoTimeLeft from '../common/convertMSToTimeLeft';
-import { gql } from '@apollo/client';
 
 import TextField from './TextField';
 import ChipsInput from './ChipsInput';
@@ -68,212 +63,17 @@ import NumberFormatTime from '../common/NumberFormatTime';
 import { Link } from 'react-router-dom';
 import EventDeleteModal from './EventDeleteModal';
 
-const useStyles = makeStyles(theme => ({
-  modal: {
-    maxWidth: '700px',
-  },
-  modalTitle: {
-    textAlign: 'left',
-    padding: '20px 20px',
-  },
-  toContainer: {
-    textAlign: 'center',
-  },
-  headerPart: {
-    marginBottom: '20px',
-  },
-  icon: {
-    color: '#707070',
-  },
-  closeIcon: {
-    color: '#D9D9D9',
-  },
-  addReminder: {
-    color: '#B7B7B7',
-    fontSize: '0.9em',
-    margin: '10px 0 10px 0',
-    textTransform: 'uppercase',
-    padding: 0,
-    backgroundColor: '#fff',
-    '&:hover': {
-      background: '#fff',
-    },
-  },
-  actions: {
-    margin: '35px 0 20px 0',
-  },
-  linkStyles: {
-    textDecoration: 'none',
-  },
-  multilineColor: {
-    color: '#2F6EE2',
-  },
-  lastUpdated: {
-    color: '#B0B1B2',
-    fontWeight: 600,
-  },
-  deleteButton: {
-    marginRight: theme.spacing(1.5),
-  },
-  fileChip: {
-    '& img': {
-      height: '70%',
-    },
-    '&:hover': {
-      background: '#e8e8e8',
-    },
-    background: '#F6F6F7',
-    border: '1px solid #DBDCDE',
-    borderRadius: '5px',
-  },
-  dateRow: {
-    display: 'flex',
-    padding: '8px',
-    width: '100%',
-    justifyContent: 'space-between',
-  },
-  dateCol: {
-    alignItems: 'flex-end',
-    display: 'flex',
-  },
-  dateInput: {
-    maxWidth: '120px',
-  },
-  timeInput: {
-    '& input': {
-      '&::webkit-inner-spin-button, &::-webkit-outer-spin-button': {
-        webkitAppearance: 'none',
-        margin: '0',
-      },
-      paddingRight: '0',
-    },
-    width: 120,
-  },
-  conflictError: {
-    color: 'rgb(247, 65, 53)',
-  },
-  chipRoot: {
-    background: '#ffffff',
-  },
-  iconButtonRoot: {
-    padding: 0,
-    marginBottom: theme.spacing(0.5),
-  },
-  switchRoot: {
-    width: 48,
-    height: 28,
-    padding: 0,
-    display: 'flex',
-  },
-  switchBase: {
-    padding: 4,
-    color: theme.palette.grey[500],
-    '&$checked': {
-      transform: 'translateX(12px)',
-      color: theme.palette.common.white,
-      '& + $track': {
-        opacity: 1,
-        backgroundColor: 'red',
-      },
-    },
-  },
-  paddingBottom: {
-    paddingBottom: 4,
-  },
-  switchThumb: {
-    width: 20,
-    height: 20,
-    boxShadow: 'none',
-    backgroundColor: theme.palette.common.white,
-  },
-  switchTrack: {
-    border: 'none',
-    borderRadius: 30,
-    opacity: 1,
-    backgroundColor: theme.palette.divider,
-  },
-  switchChecked: {},
-  titleModalConfirm: {
-    textAlign: 'center',
-    paddingBottom: '0px',
-    paddingTop: '35px',
-  },
-  colorDelBtn: {
-    color: red['A700'],
-  },
-  hoverDelBtn: {
-    '&:hover': {
-      background: blue[800],
-      color: blue[50],
-    },
-  },
-}));
-
-type EventDetailsProps = {
-  event?: Event;
-  open: boolean;
-  setOpen: (open: boolean) => void;
-  onDialogClose?: () => void;
-  refetchEvents?: () => void;
-  message?: Maybe<Message>;
-  onEventCreation?: (eventId: string, event: Event) => void;
-  onCreateEventFromMessageItem?: (eventId: string, event: Event) => void;
-  currentUser: User;
-  onEventDelition?: () => void;
-  messageId?: string;
-  messageTitle?: string | null | undefined;
-  isMessageDone?: boolean | null | undefined;
-  isMessageDeleted?: boolean | null | undefined;
-};
-
-interface EventForm {
-  startDate: string;
-  startTime: string;
-  endDate: string;
-  endTime: string;
-  notifications: NotificationItem[];
-}
-
-type NotificationItem = {
-  userId: string;
-  period: string;
-  periodType: PeriodType;
-};
-
-type ActionType = 'userId' | 'periodType' | 'period';
-type PeriodType = 'Minute' | 'Hour' | 'Day' | 'Week';
-
-const periodTypes = ['Minute', 'Hour', 'Day', 'Week'];
-const periodRate = {
-  Minute: 1000 * 60,
-  Hour: 1000 * 60 * 60,
-  Day: 1000 * 60 * 60 * 24,
-  Week: 1000 * 60 * 60 * 24 * 7,
-};
-
-export const createLink = (
-  userEmail: string,
-  messageId: string | null | undefined,
-  isDone: boolean | null | undefined,
-  isDeleted: boolean | null | undefined,
-): string => {
-  if (isDone) {
-    return `/messages/done/${messageId}`;
-  } else if (isDeleted) {
-    return `/messages/deleted/${messageId}`;
-  } else {
-    return `/inbox/${userEmail}/${messageId}`;
-  }
-};
-
-const messageFragment = gql`
-  fragment MyMessage on Message {
-    id
-    event {
-      id #id should be for correct render
-    }
-  }
-`;
+import useStyles from './styles/styles';
+import {
+  EventDetailsProps,
+  EventForm,
+  NotificationItem,
+  ActionType,
+  PeriodType,
+} from './types/types';
+import { periodRate, periodTypes } from '../common/periodTypes';
+import { createLink } from '../common/helper';
+import { messageFragment } from '../graphql/generated';
 
 const EventDetails = ({
   event,
